@@ -76,6 +76,7 @@ async def deleteUser(unique_name,temp_session):
             # Detach all managed policies
             for policy in iam_client.list_attached_user_policies(UserName=unique_name)['AttachedPolicies']:
                 iam_client.detach_user_policy(UserName=unique_name, PolicyArn=policy['PolicyArn'])
+                print(policy)
         except Exception as e:
             raise HTTPException(status_code=403, detail="Failed to detach policy"+str(e))
 
@@ -94,10 +95,17 @@ async def deleteUser(unique_name,temp_session):
             raise HTTPException(status_code=403, detail="Failed to delete access key"+str(e))
         
         try:
-            for group in iam_client.list_groups_for_user(UserName=unique_name):
+            for group in iam_client.list_groups_for_user(UserName=unique_name)['Groups']:
                 iam_client.remove_user_from_group(UserName=unique_name, GroupName=group['GroupName'])
         except Exception as e:
             raise HTTPException(status_code=403, detail="Failed to remove user from group"+str(e))
+
+        try:
+            for mfa_device in iam_client.list_mfa_devices(UserName=unique_name)['MFADevices']:
+                iam_client.deactivate_mfa_device(UserName=unique_name, SerialNumber=mfa_device['SerialNumber'])
+                iam_resource.delete_mfa_device(UserName=unique_name, SerialNumber=mfa_device['SerialNumber'])
+        except Exception as e:
+            raise HTTPException(status_code=403, detail=f"Failed to remove MFA device: {e}")
 
         # Delete the login profile (if exists)
         try:
@@ -111,8 +119,10 @@ async def deleteUser(unique_name,temp_session):
         except Exception as e:
             raise HTTPException(status_code=403, detail="Failed to delete user"+str(e))
         table.delete_item(Key={'username': unique_name})
-        print(f"User '{unique_name}' deleted successfully.")
-        raise HTTPException(status_code=200, detail="User deleted successfully")
     
     except Exception as e:
         print(f"Error deleting user '{unique_name}': {e}")
+        raise HTTPException(status_code=403, detail=str(e))
+
+    print(f"User '{unique_name}' deleted successfully.")
+    raise HTTPException(status_code=200, detail="User deleted successfully")
