@@ -2,24 +2,27 @@ from fastapi import APIRouter,HTTPException
 import boto3
 from app.config.aws import session 
 from app.auth.validate import validate_session
+from app.auth.createSession import create_temp_session
 
-router_view = APIRouter()
+router_viewer = APIRouter()
+@router_viewer.get('/')
+async def index():
+    return {"message": "Welcome to the viewer page."}
 
-
-@router_view.get("/{username}/get-logs")
+@router_viewer.get("/{username}/log-viewer")
 async def get_logs(username:str,token:str):
-    credentials = validate_session(username,token)
+    temp_session=create_temp_session(validate_session(username,token))
+    print(temp_session)
     try:
-        logs_client = boto3.client('logs',
-                                   aws_access_key_id=credentials['access_key_id'],
-                                   aws_secret_access_key=credentials['secret_access_key'],
-                                   region_name='ap-south-1')#, region_name='YOUR_REGION')
+        cloudtrail_client = temp_session.client('cloudtrail',region_name='ap-south-1')
         # Logic to fetch logs from CloudTrail (specific configuration required)
-        events = logs_client.get_log_events(log_group_name='CloudTrail',log_stream_name='CloudTrail/DefaultLogGroup')
+        
+        events = cloudtrail_client.lookup_events()#log_group_name='CloudTrail',log_stream_name='CloudTrail/DefaultLogGroup')
         print(events)
-        return {"message": "Logs retrieved."}
+        raise HTTPException(status_code=200, detail="Logs retrieved.")
+        #return {"message": "Logs retrieved."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    return {"message": "Logs retrieved."}
 
 

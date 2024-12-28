@@ -6,11 +6,7 @@ from app.schemas.schema import Group
 from fastapi import Query
 from typing import Optional
 router_admin = APIRouter()
-#router_admin
-#@router_admin.get("/")
-def admin(username:str,token:str):
-    validate_session(username,token)
-    return {"message": "Hello Admin","services":["Manage users/policies"]}
+
 @router_admin.post("/{username}/create-user")
 async def create_user(username:str,token:str,name:str,selected_group: Optional[Group]=Query()):
     # new_user={
