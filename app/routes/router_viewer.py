@@ -16,9 +16,17 @@ async def get_logs(username:str,token:str):
     try:
         cloudtrail_client = temp_session.client('cloudtrail',region_name='ap-south-1')
         # Logic to fetch logs from CloudTrail (specific configuration required)
-        
         events = cloudtrail_client.lookup_events()#log_group_name='CloudTrail',log_stream_name='CloudTrail/DefaultLogGroup')
-        print(events)
+        
+        for event in events['Events']:
+            print(f"Event Name: {event['EventName']}")
+            print(f"Event Time: {event['EventTime']}")
+            print(f"Event Source: {event['EventSource']}")
+            print(f"Event Details: {event['CloudTrailEvent']}")
+            print("----\n")
+
+
+
         raise HTTPException(status_code=200, detail="Logs retrieved.")
         #return {"message": "Logs retrieved."}
     except Exception as e:
