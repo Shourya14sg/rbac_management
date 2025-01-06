@@ -20,11 +20,8 @@ async def create_user(username:str,token:str,name:str,selected_group: Optional[G
 
 @router_admin.delete("/{username}/delete-user")
 async def delete_user(username:str,token:str,name:str):
-    try:
         temp_session=create_temp_session(validate_session(username,token))
         await deleteUser(name,temp_session)
         return {"message": "User deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
 
     

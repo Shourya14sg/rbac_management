@@ -8,11 +8,14 @@ router_auth = APIRouter()
 
 @router_auth.post("/login")
 async def login(username:str=Form(...),mfa_code:str=Form(...)):
-     #get user from aws iam
     try:
        #user exists?
         user = iam_client.get_user(UserName=username)
-        res=await authenticate_user(username)
+    except iam_client.exceptions.ClientError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    
+    res=await authenticate_user(username)
+    try:
         mfa_device = iam_client.list_mfa_devices(UserName=username)
         if not mfa_device['MFADevices']:
             raise HTTPException(status_code=403, detail="Forbidden: MFA not enabled for this user")
@@ -28,7 +31,6 @@ async def login(username:str=Form(...),mfa_code:str=Form(...)):
             session = sts_client.get_session_token(
                 SerialNumber=mfa_serial,
                 TokenCode=mfa_code
-            #    ,DurationSeconds=123 # 15 minutes session
             )
             try:
                 table=dynamodb_client.Table('user_session')
@@ -43,8 +45,7 @@ async def login(username:str=Form(...),mfa_code:str=Form(...)):
             except Exception as e:
                 print(e)
                 raise HTTPException(status_code=500, detail="dynamodb error in creating session")
-            return result #session['Credentials']   #main thing for session manangement
-        
+            return result #session['Credentials']   # for session manangement
         except iam_client.exceptions.ClientError as e:
            raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
